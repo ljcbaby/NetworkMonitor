@@ -383,39 +383,39 @@ const edges = computed(() =>
           next_curveness = false
         } else next_curveness = true
       }
-
-      let pre_source = arrows[arrows.length - 1]?.src
-
-      while (arrows.length !== 0) {
-        const arrow = arrows.pop() as NonNullable<(typeof lines)[number]>
-        const betweenness =
-          pathBetweenness.value?.find(
-            (p) =>
-              p.src == arrow.src && p.dst == arrow.dst && p.cost == arrow.cost,
-          )?.betweenness || 0
-        edges.push({
-          source: arrow.src,
-          target: arrow.dst,
-          value: 100 / arrow.cost,
-          cost: arrow.cost,
-          betweenness: betweenness,
-          lineStyle: {
-            curveness:
-              pre_source === arrow.src && next_curveness
-                ? -curveness
-                : curveness,
-            width: calcEdgeWidthFromPathBetweenness(
-              betweenness,
-              nodes.value?.length,
-            ),
-          },
-          symbol: ['', 'arrow'],
-          type: 'unidirectional',
-        })
-        if (next_curveness) {
-          curveness += 0.07
-          next_curveness = false
-        } else next_curveness = true
+      let forward: NonNullable<typeof all_links.value> = []
+      let backward: NonNullable<typeof all_links.value> = []
+      for (const arrow of arrows) {
+        if (arrow.src === a.router_id) forward.push(arrow)
+        else backward.push(arrow)
+      }
+      for (const group of [forward, backward]) {
+        group.sort((x, y) => x.cost - y.cost)
+        let group_curveness = curveness
+        for (const arrow of group) {
+          const betweenness =
+            pathBetweenness.value?.find(
+              (p) =>
+                p.src == arrow.src && p.dst == arrow.dst && p.cost == arrow.cost,
+            )?.betweenness || 0
+          edges.push({
+            source: arrow.src,
+            target: arrow.dst,
+            value: 100 / arrow.cost,
+            cost: arrow.cost,
+            betweenness: betweenness,
+            lineStyle: {
+              curveness: group_curveness,
+              width: calcEdgeWidthFromPathBetweenness(
+                betweenness,
+                nodes.value?.length,
+              ),
+            },
+            symbol: ['', 'arrow'],
+            type: 'unidirectional',
+          })
+          group_curveness += 0.07
+        }
       }
       return edges
     }),
